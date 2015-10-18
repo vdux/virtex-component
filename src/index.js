@@ -2,7 +2,14 @@
  * Imports
  */
 
-import {types} from 'virtex'
+import {actions} from 'virtex'
+import {objectEqual, arrayEqual} from './shallowEqual'
+
+/**
+ * Vars
+ */
+
+const {types} = actions
 
 /**
  * virtex-component
@@ -11,11 +18,11 @@ import {types} from 'virtex'
 function middleware ({dispatch}) {
   return next => action =>
     action.type === types.RENDER_THUNK
-      ? component(dispatch, action.payload)
+      ? component(a => a && dispatch(a), action.payload)
       : next(action)
 }
 
-function component ({thunk, prev}) {
+function component (dispatch, {thunk, prev}) {
   if (thunk.vnode) return thunk.vnode
   const {beforeMount, afterMount, beforeUpdate, afterUpdate} = thunk.component
 
@@ -28,18 +35,19 @@ function component ({thunk, prev}) {
     afterUpdate && setTimeout(() => dispatch(afterUpdate(prev.props, thunk.props)))
     return render(thunk)
   } else {
+    thunk.vnode = prev.vnode
     return prev.vnode
   }
 }
 
 function shouldUpdate (component, prevProps, nextProps) {
-  if (shallowEqual(prevProps.children, nextProps.children)) {
+  if (arrayEqual(prevProps.children, nextProps.children)) {
     nextProps.children = prevProps.children
   }
 
   return component.shouldUpdate
     ? component.shouldUpdate(prevProps, nextProps)
-    : shallowEqual(prevProps, nextProps)
+    : !objectEqual(prevProps, nextProps)
 }
 
 function render (thunk) {

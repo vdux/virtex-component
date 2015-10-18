@@ -7,7 +7,7 @@ Component rendering middleware for virtex
 
 ## Installation
 
-    $ npm install @ashaffer/virtex-component
+    $ npm install virtex-component
 
 ## License
 
