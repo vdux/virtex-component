@@ -18,7 +18,7 @@ const {types} = actions
 function middleware ({dispatch}) {
   return next => action =>
     action.type === types.RENDER_THUNK
-      ? component(a => a && dispatch(a), action.payload)
+      ? component(a => a && dispatch(a), action)
       : next(action)
 }
 
