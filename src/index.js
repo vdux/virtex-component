@@ -6,10 +6,10 @@ import {actions} from 'virtex'
 import {objectEqual, arrayEqual} from './shallowEqual'
 
 /**
- * Vars
+ * Constants
  */
 
-const {types} = actions
+const {RENDER_THUNK} = actions.types
 
 /**
  * virtex-component
@@ -17,7 +17,7 @@ const {types} = actions
 
 function middleware ({dispatch}) {
   return next => action =>
-    action.type === types.RENDER_THUNK
+    action.type === RENDER_THUNK
       ? component(a => a && dispatch(a), action)
       : next(action)
 }
@@ -52,7 +52,27 @@ function shouldUpdate (component, prevProps, nextProps) {
 
 function render (thunk) {
   thunk.vnode = thunk.component.render(thunk.props)
+
   return thunk.vnode
+}
+
+function applyHooks (vnode, {key, component, props}) {
+  const attrs = vnode.attrs = vnode.attrs || {}
+
+  // In the case of beforeMount, we only wish to patch in our hook
+  // on the first run so it runs once on creation
+  if (component.afterMount && !attrs[key + ':afterMount']) {
+    attrs[key + ':afterMount'] = (node, name, remove) => remove || dispatch(afterMount(props))
+  }
+
+  // In the case of beforeUnmount, we want to patch it in each time,
+  // so that whenever the component is unmounted, it'll have the
+  // latest props
+  if (component.beforeUnmount) {
+    attrs[key + ':beforeUnmount'] = (node, name, remove) => remove && dispatch(beforeUnmount(props))
+  }
+
+  return vnode
 }
 
 function isSameThunk (a, b) {
