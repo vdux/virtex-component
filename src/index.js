@@ -3,13 +3,14 @@
  */
 
 import {actions} from 'virtex'
-import {objectEqual, arrayEqual} from './shallowEqual'
+import shallowEqual from './shallowEqual'
 import uid from 'get-uid'
 
 /**
  * Constants
  */
 
+const {objectEqual, arrayEqual} = shallowEqual
 const {RENDER_THUNK, UNRENDER_THUNK} = actions.types
 
 /**
@@ -36,6 +37,7 @@ function unrenderComponent (dispatch, {thunk}) {
 
 function renderComponent (dispatch, {thunk, prev}) {
   if (thunk.vnode) return thunk.vnode
+
   const {beforeMount, beforeUpdate, afterUpdate, afterMount} = thunk.component
 
   if (!prev || !isSameThunk(thunk, prev)) {
@@ -44,7 +46,7 @@ function renderComponent (dispatch, {thunk, prev}) {
       dispatch(beforeMount(thunk.props))
     }
 
-    const vnode = thunk.vnode = thunk.component.render(thunk.props)
+    const vnode = thunk.vnode = render(thunk.component, thunk.props)
 
     if (afterMount) {
       vnode.attrs = vnode.attrs || {}
@@ -57,7 +59,7 @@ function renderComponent (dispatch, {thunk, prev}) {
       dispatch(beforeUpdate(prev.props, thunk.props))
     }
 
-    thunk.vnode = thunk.component.render(thunk.props)
+    thunk.vnode = render(thunk.component, thunk.props)
 
     if (afterUpdate) {
       dispatch(afterUpdate(prev.props, thunk.props))
@@ -68,6 +70,12 @@ function renderComponent (dispatch, {thunk, prev}) {
     thunk.vnode = prev.vnode
     return prev.vnode
   }
+}
+
+function render (component, props) {
+  return typeof component === 'function'
+    ? component(props)
+    : component.render(props)
 }
 
 function shouldUpdate (component, prevProps, nextProps) {
