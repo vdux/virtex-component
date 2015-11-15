@@ -2,16 +2,17 @@
  * Imports
  */
 
-import {actions} from 'virtex'
-import shallowEqual from './shallowEqual'
 import uid from 'get-uid'
+import {actions} from 'virtex'
+import defaults from 'defaults'
+import arrayEqual from 'array-equal'
+import objectEqual from 'object-equal'
 
 /**
  * Constants
  */
 
-const {objectEqual, arrayEqual} = shallowEqual
-const {RENDER_THUNK, UNRENDER_THUNK} = actions.types
+const {CREATE_THUNK, UPDATE_THUNK, DESTROY_THUNK} = actions.types
 
 /**
  * virtex-component
@@ -20,72 +21,80 @@ const {RENDER_THUNK, UNRENDER_THUNK} = actions.types
 function middleware ({dispatch}) {
   return next => action => {
     switch (action.type) {
-      case RENDER_THUNK:
-        return renderComponent(a => a && dispatch(a), action)
-      case UNRENDER_THUNK:
-        return unrenderComponent(a => a && dispatch(a), action)
+      case CREATE_THUNK:
+        return create(a => a && dispatch(a), action)
+      case UPDATE_THUNK:
+        return update(a => a && dispatch(a), action)
+      case DESTROY_THUNK:
+        return destroy(a => a && dispatch(a), action)
       default:
         return next(action)
     }
   }
 }
 
-function unrenderComponent (dispatch, {thunk}) {
-  const {beforeUnmount} = thunk.component
-  beforeUnmount && dispatch(beforeUnmount(thunk.props))
+function create (dispatch, {thunk}) {
+  const {component, model} = thunk
+  const {beforeMount, afterMount} = component
+
+  // Setup the default immutable shouldUpdate if this component
+  // hasn't exported one
+  component.shouldUpdate = component.shouldUpdate || shouldUpdate
+
+  if (beforeMount) {
+    dispatch(beforeMount(model))
+  }
+
+  const vnode = thunk.vnode = render(component, model)
+
+  if (afterMount) {
+    vnode.attrs = vnode.attrs || {}
+    vnode.attrs[uid() + ':afterMount'] = () => { dispatch(afterMount(model)) }
+  }
+
+  return vnode
 }
 
-function renderComponent (dispatch, {thunk, prev}) {
-  if (thunk.vnode) return thunk.vnode
+function update (dispatch, {thunk, prev}) {
+  const {component, model} = thunk
+  const {beforeUpdate, afterUpdate, shouldUpdate} = component
 
-  const {beforeMount, beforeUpdate, afterUpdate, afterMount} = thunk.component
+  // Copy over everything from the old model to the new
+  // model, unless the new model has an updated property
+  defaults(thunk.model, prev.model)
 
-  if (!prev || !isSameThunk(thunk, prev)) {
-    thunk.id = uid()
-    if (beforeMount) {
-      dispatch(beforeMount(thunk.props))
-    }
-
-    const vnode = thunk.vnode = render(thunk.component, thunk.props)
-
-    if (afterMount) {
-      vnode.attrs = vnode.attrs || {}
-      vnode.attrs[uid() + ':afterMount'] = () => { dispatch(afterMount(thunk.props)) }
-    }
-
-    return vnode
-  } else if (shouldUpdate(thunk.component, prev.props, thunk.props)) {
+  if (shouldUpdate(prev.model, model)) {
     if (beforeUpdate) {
-      dispatch(beforeUpdate(prev.props, thunk.props))
+      dispatch(beforeUpdate(prev.model, model))
     }
 
-    thunk.vnode = render(thunk.component, thunk.props)
+    thunk.vnode = render(component, model)
 
     if (afterUpdate) {
-      dispatch(afterUpdate(prev.props, thunk.props))
+      dispatch(afterUpdate(prev.model, model))
     }
 
     return thunk.vnode
   } else {
-    thunk.vnode = prev.vnode
-    return prev.vnode
+    return (thunk.vnode = prev.vnode)
   }
 }
 
-function render (component, props) {
+function destroy (dispatch, {thunk}) {
+  const {beforeUnmount} = thunk.component
+  if (beforeUnmount) {
+    dispatch(beforeUnmount(thunk.model))
+  }
+}
+
+function render (component, model) {
   return typeof component === 'function'
-    ? component(props)
-    : component.render(props)
+    ? component(model)
+    : component.render(model)
 }
 
-function shouldUpdate (component, prevProps, nextProps) {
-  if (arrayEqual(prevProps.children, nextProps.children)) {
-    nextProps.children = prevProps.children
-  }
-
-  return component.shouldUpdate
-    ? component.shouldUpdate(prevProps, nextProps)
-    : !objectEqual(prevProps, nextProps)
+function shouldUpdate (prev, next) {
+  return !arrayEqual(prev.children, next.children) || !objectEqual(prev.props, next.props)
 }
 
 function isSameThunk (a, b) {

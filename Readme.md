@@ -9,6 +9,60 @@ Component rendering middleware for virtex
 
     $ npm install virtex-component
 
+## Usage
+
+Install it in your middleware stack like this:
+
+`applyMiddleware(component, dom(document), ...others)`
+
+Then export components like this:
+
+```javascript
+function beforeMount ({props}) {
+  return fetchSomeData()
+}
+
+function render ({props, children}) {
+  return (
+    <ul style={{color: props.color}}>
+      children.map(child => <li>{child}</li>)
+    </ul>
+  )
+}
+
+export default {
+  beforeMount,
+  render
+}
+```
+
+### Model
+
+Components are passed an object that contains (at least) 3 things:
+
+  * `props` - An object of the properties passed in by the calling component
+  * `children` - An array of the children specified by the calling component
+  * `path` - The numerical (e.g. `0.1.3`) path in the *component* tree.  This will be used to store your local state if you don't specify a key (by [virtex-local](https://github.com/ashaffer/virtex-local)).
+  * `key` - The key specified by your parent in props (optional).
+
+These are all of the things that virtex-component will put into your model.  But other effect processors may add additional properties.
+
+### Lifecycle hooks
+
+All lifecycle hooks receive `model` (and possibly `prevModel`) and may return an action.  That action will be dispatched back into redux - this and only this is how your lifecyle hooks may effect the outside world.
+
+  * `beforeMount` - Executes before the component has been rendered into the DOM
+  * `beforeUpdate` - Does not execute on the first render, but does so on all subsequent renders. Receives `prev` and `next` models.
+  * `render` - Receives model and returns a vnode.
+  * `afterUpdate` - Receives `prev` and `next` models like beforeUpdate. Also does not run on initial render.
+  * `afterMount` - Runs after the component has been mounted into the DOM
+  * `beforeUnmount` - Runs before the component is removed from the DOM
+
+## shouldUpdate
+
+By default, your component will only update if a shallow equality check fails for your children or prev/next props.  However, by exporting a custom `shouldUpdate` function, you can control this yourself.
+
+
 ## License
 
 The MIT License

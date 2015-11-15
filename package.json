@@ -10,10 +10,13 @@
     "postpublish": "rm -rf lib"
   },
   "dependencies": {
-    "get-uid": "^1.0.1"
+    "array-equal": "github:micro-js/array-equal",
+    "defaults": "github:micro-js/defaults",
+    "get-uid": "^1.0.1",
+    "object-equal": "github:micro-js/object-equal",
+    "omap": "github:micro-js/omap"
   },
   "devDependencies": {
-    "babel": "^5.8.21",
     "babel-preset-es2015": "^6.1.2",
     "babel-tape-runner": "^1.2.0",
     "standard": "^5.1.0",
