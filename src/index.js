@@ -22,20 +22,22 @@ function middleware ({dispatch}) {
   return next => action => {
     switch (action.type) {
       case CREATE_THUNK:
-        return create(a => a && dispatch(a), action)
+        return create(a => a && dispatch(a), action.vnode)
       case UPDATE_THUNK:
-        return update(a => a && dispatch(a), action)
+        return update(a => a && dispatch(a), action.vnode, action.prev)
       case DESTROY_THUNK:
-        return destroy(a => a && dispatch(a), action)
+        return destroy(a => a && dispatch(a), action.vnode)
       default:
         return next(action)
     }
   }
 }
 
-function create (dispatch, {thunk}) {
-  const {component, model} = thunk
+function create (dispatch, thunk) {
+  const {type: component} = thunk
   const {beforeMount, afterMount} = component
+
+  const model = createModel(thunk)
 
   // Setup the default immutable shouldUpdate if this component
   // hasn't exported one
@@ -55,13 +57,13 @@ function create (dispatch, {thunk}) {
   return vnode
 }
 
-function update (dispatch, {thunk, prev}) {
-  const {component, model} = thunk
+function update (dispatch, thunk, prev) {
+  const {type: component} = thunk
   const {beforeUpdate, afterUpdate, shouldUpdate} = component
 
   // Copy over everything from the old model to the new
   // model, unless the new model has an updated property
-  defaults(thunk.model, prev.model)
+  const model = defaults(createModel(thunk), prev.model)
 
   if (shouldUpdate(prev.model, model)) {
     if (beforeUpdate) {
@@ -80,8 +82,19 @@ function update (dispatch, {thunk, prev}) {
   }
 }
 
-function destroy (dispatch, {thunk}) {
-  const {beforeUnmount} = thunk.component
+function createModel (thunk) {
+  const model = thunk.model = thunk.model || {}
+
+  model.children = thunk.children
+  model.props = thunk.attrs || {}
+  model.path = thunk.path
+  model.key = thunk.key
+
+  return model
+}
+
+function destroy (dispatch, thunk) {
+  const {beforeUnmount} = thunk.type
   if (beforeUnmount) {
     dispatch(beforeUnmount(thunk.model))
   }
@@ -95,10 +108,6 @@ function render (component, model) {
 
 function shouldUpdate (prev, next) {
   return !arrayEqual(prev.children, next.children) || !objectEqual(prev.props, next.props)
-}
-
-function isSameThunk (a, b) {
-  return a.component === b.component
 }
 
 /**
