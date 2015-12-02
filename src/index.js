@@ -19,14 +19,16 @@ const {CREATE_THUNK, UPDATE_THUNK, DESTROY_THUNK} = actions.types
  */
 
 function middleware ({dispatch}) {
+  const maybeDispatch = action => action && dispatch(action)
+
   return next => action => {
     switch (action.type) {
       case CREATE_THUNK:
-        return create(a => a && dispatch(a), action.vnode)
+        return create(maybeDispatch, action.vnode)
       case UPDATE_THUNK:
-        return update(a => a && dispatch(a), action.vnode, action.prev)
+        return update(maybeDispatch, action.vnode, action.prev)
       case DESTROY_THUNK:
-        return destroy(a => a && dispatch(a), action.vnode)
+        return destroy(maybeDispatch, action.vnode)
       default:
         return next(action)
     }
@@ -34,76 +36,54 @@ function middleware ({dispatch}) {
 }
 
 function create (dispatch, thunk) {
-  const {type: component} = thunk
+  const component = thunk.type
   const {beforeMount, afterMount} = component
 
-  const model = createModel(thunk)
+  thunk.props = thunk.props || {}
 
   // Setup the default immutable shouldUpdate if this component
   // hasn't exported one
   component.shouldUpdate = component.shouldUpdate || shouldUpdate
 
-  if (beforeMount) {
-    dispatch(beforeMount(model))
-  }
+  beforeMount && dispatch(beforeMount(thunk))
 
-  const vnode = thunk.vnode = render(component, model)
+  const vnode = thunk.vnode = render(component, thunk)
 
   if (afterMount) {
-    vnode.attrs = vnode.attrs || {}
-    vnode.attrs[uid() + ':afterMount'] = () => { dispatch(afterMount(model)) }
+    vnode.props = vnode.props || {}
+    vnode.props[uid() + ':afterMount'] = () => { dispatch(afterMount(thunk)) }
   }
 
   return vnode
 }
 
 function update (dispatch, thunk, prev) {
-  const {type: component} = thunk
+  const component = thunk.type
   const {beforeUpdate, afterUpdate, shouldUpdate} = component
 
-  // Copy over everything from the old model to the new
-  // model, unless the new model has an updated property
-  const model = defaults(createModel(thunk), prev.model)
+  thunk.props = thunk.props || {}
+  defaults(thunk, prev)
 
-  if (shouldUpdate(prev.model, model)) {
-    if (beforeUpdate) {
-      dispatch(beforeUpdate(prev.model, model))
-    }
-
-    thunk.vnode = render(component, model)
-
-    if (afterUpdate) {
-      dispatch(afterUpdate(prev.model, model))
-    }
+  if (shouldUpdate(prev, thunk)) {
+    beforeUpdate && dispatch(beforeUpdate(prev, thunk))
+    thunk.vnode = render(component, thunk)
+    afterUpdate && dispatch(afterUpdate(prev, thunk))
 
     return thunk.vnode
-  } else {
-    return (thunk.vnode = prev.vnode)
   }
-}
 
-function createModel (thunk) {
-  const model = thunk.model = thunk.model || {}
-
-  model.children = thunk.children
-  model.props = thunk.attrs || {}
-  model.path = thunk.path
-  model.key = thunk.key
-
-  return model
+  return (thunk.vnode = prev.vnode)
 }
 
 function destroy (dispatch, thunk) {
   const {beforeUnmount} = thunk.type
-  if (beforeUnmount) {
-    dispatch(beforeUnmount(thunk.model))
-  }
+  beforeUnmount && dispatch(beforeUnmount(thunk))
 }
 
-function render (component, model) {
+function render (component, thunk) {
   return typeof component === 'function'
-    ? component(model)
-    : component.render(model)
+    ? component(thunk)
+    : component.render(thunk)
 }
 
 function shouldUpdate (prev, next) {
