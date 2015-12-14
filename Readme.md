@@ -45,7 +45,7 @@ Components are passed an object that contains (at least) 3 things:
   * `path` - The numerical (e.g. `0.1.3`) path in the *component* tree.  This will be used to store your local state if you don't specify a key (by [virtex-local](https://github.com/ashaffer/virtex-local)).
   * `key` - The key specified by your parent in props (optional).
 
-These are all of the things that virtex-component will put into your model.  But other effect processors may add additional properties.
+These are all of the things that virtex-component will put into your model.  But other effect, such as [virtex-local](https://github.com/ashaffer/virtex-local) processors may add additional properties.
 
 ### Lifecycle hooks
 
