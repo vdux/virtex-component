@@ -10,11 +10,12 @@
     "postpublish": "rm -rf lib"
   },
   "dependencies": {
-    "array-equal": "github:micro-js/array-equal",
-    "defaults": "github:micro-js/defaults",
+    "@micro-js/array-equal": "^1.0.0",
+    "@micro-js/defaults": "^1.0.0",
+    "@micro-js/map-obj": "^1.1.2",
+    "@micro-js/object-equal": "^1.0.0",
     "get-uid": "^1.0.1",
-    "object-equal": "github:micro-js/object-equal",
-    "omap": "github:micro-js/omap"
+    "virtex": "^0.1.17"
   },
   "devDependencies": {
     "babel-preset-es2015": "^6.1.2",
