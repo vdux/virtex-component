@@ -10,10 +10,9 @@
     "postpublish": "rm -rf lib"
   },
   "dependencies": {
-    "@micro-js/array-equal": "^1.0.0",
-    "@micro-js/defaults": "^1.0.0",
-    "@micro-js/map-obj": "^1.1.2",
-    "@micro-js/object-equal": "^1.0.0",
+    "@f/array-equal": "^1.1.1",
+    "@f/defaults": "^0.1.1",
+    "@f/object-equal": "^1.1.1",
     "get-uid": "^1.0.1",
     "virtex": "^0.1.17"
   },

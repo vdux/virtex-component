@@ -4,9 +4,9 @@
 
 import uid from 'get-uid'
 import {actions} from 'virtex'
-import defaults from 'defaults'
-import arrayEqual from 'array-equal'
-import objectEqual from 'object-equal'
+import defaults from '@f/defaults'
+import arrayEqual from '@f/array-equal'
+import objectEqual from '@f/object-equal'
 
 /**
  * Constants
