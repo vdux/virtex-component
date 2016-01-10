@@ -58,6 +58,8 @@ function create (dispatch, thunk) {
 }
 
 function update (dispatch, thunk, prev) {
+  if (thunk.vnode) return thunk.vnode
+
   const component = thunk.type
   const {beforeUpdate, afterUpdate, shouldUpdate} = component
 
