@@ -18,7 +18,7 @@ Install it in your middleware stack like this:
 Then export components like this:
 
 ```javascript
-function beforeMount ({props}) {
+function onCreate ({props}) {
   return fetchSomeData()
 }
 
@@ -31,7 +31,7 @@ function render ({props, children}) {
 }
 
 export default {
-  beforeMount,
+  onCreate,
   render
 }
 ```
@@ -51,12 +51,9 @@ These are all of the things that virtex-component will put into your model.  But
 
 All lifecycle hooks receive `model` (and possibly `prevModel`) and may return an action.  That action will be dispatched back into redux - this and only this is how your lifecyle hooks may effect the outside world.
 
-  * `beforeMount` - Executes before the component has been rendered into the DOM
-  * `beforeUpdate` - Does not execute on the first render, but does so on all subsequent renders. Receives `prev` and `next` models.
-  * `render` - Receives model and returns a vnode.
-  * `afterUpdate` - Receives `prev` and `next` models like beforeUpdate. Also does not run on initial render.
-  * `afterMount` - Runs after the component has been mounted into the DOM
-  * `beforeUnmount` - Runs before the component is removed from the DOM
+  * `onCreate` - When the component is created. Receives `model`.
+  * `onUpdate` - When the model changes. Receives `prev` and `next` models.
+  * `onRemove` - When the component is removed. Receives `model`.
 
 ## shouldUpdate
 
