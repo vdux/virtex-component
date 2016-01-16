@@ -2,7 +2,6 @@
  * Imports
  */
 
-import uid from 'get-uid'
 import {actions} from 'virtex'
 import defaults from '@f/defaults'
 import arrayEqual from '@f/array-equal'
@@ -37,7 +36,7 @@ function middleware ({dispatch}) {
 
 function create (dispatch, thunk) {
   const component = thunk.type
-  const {beforeMount, afterMount} = component
+  const {onCreate} = component
 
   thunk.props = thunk.props || {}
 
@@ -45,31 +44,26 @@ function create (dispatch, thunk) {
   // hasn't exported one
   component.shouldUpdate = component.shouldUpdate || shouldUpdate
 
-  beforeMount && dispatch(beforeMount(thunk))
-
-  const vnode = thunk.vnode = render(component, thunk)
-
-  if (afterMount) {
-    vnode.props = vnode.props || {}
-    vnode.props[uid() + ':afterMount'] = () => { dispatch(afterMount(thunk)) }
+  // Call the onCreate hook
+  if (onCreate) {
+    dispatch(onCreate(thunk))
   }
 
-  return vnode
+  return (thunk.vnode = render(component, thunk))
 }
 
 function update (dispatch, thunk, prev) {
   if (thunk.vnode) return thunk.vnode
 
   const component = thunk.type
-  const {beforeUpdate, afterUpdate, shouldUpdate} = component
+  const {onUpdate, shouldUpdate} = component
 
   thunk.props = thunk.props || {}
   defaults(thunk, prev)
 
   if (shouldUpdate(prev, thunk)) {
-    beforeUpdate && dispatch(beforeUpdate(prev, thunk))
+    onUpdate && dispatch(onUpdate(prev, thunk))
     thunk.vnode = render(component, thunk)
-    afterUpdate && dispatch(afterUpdate(prev, thunk))
 
     return thunk.vnode
   }
@@ -78,8 +72,8 @@ function update (dispatch, thunk, prev) {
 }
 
 function destroy (dispatch, thunk) {
-  const {beforeUnmount} = thunk.type
-  beforeUnmount && dispatch(beforeUnmount(thunk))
+  const {onRemove} = thunk.type
+  onRemove && dispatch(onRemove(thunk))
 }
 
 function render (component, thunk) {
