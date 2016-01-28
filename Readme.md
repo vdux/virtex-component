@@ -13,7 +13,7 @@ Component rendering middleware for virtex
 
 Install it in your middleware stack like this:
 
-`applyMiddleware(component, dom(document), ...others)`
+`applyMiddleware(component(), dom(document), ...others)`
 
 Then export components like this:
 
@@ -58,6 +58,17 @@ All lifecycle hooks receive `model` (and possibly `prevModel`) and may return an
 ## shouldUpdate
 
 By default, your component will only update if a shallow equality check fails for your children or prev/next props.  However, by exporting a custom `shouldUpdate` function, you can control this yourself.
+
+## Component map
+
+If you pass an object to virtex-component when you install it, it will maintain a map for you of components to paths. E.g.
+
+```javascript
+const map = {}
+applyMiddleware(component(map), ...)
+```
+
+Here, `map` will contain a mapping between components and paths. This can be useful for implementing fast sub-tree re-rendering.
 
 
 ## License

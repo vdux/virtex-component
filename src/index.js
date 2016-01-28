@@ -17,19 +17,26 @@ const {CREATE_THUNK, UPDATE_THUNK, DESTROY_THUNK} = actions.types
  * virtex-component
  */
 
-function middleware ({dispatch}) {
-  const maybeDispatch = action => action && dispatch(action)
+function middleware (components = {}) {
+  return ({dispatch}) => {
+    const maybeDispatch = action => action && dispatch(action)
 
-  return next => action => {
-    switch (action.type) {
-      case CREATE_THUNK:
-        return create(maybeDispatch, action.vnode)
-      case UPDATE_THUNK:
-        return update(maybeDispatch, action.vnode, action.prev)
-      case DESTROY_THUNK:
-        return destroy(maybeDispatch, action.vnode)
-      default:
-        return next(action)
+    return next => action => {
+      switch (action.type) {
+        case CREATE_THUNK:
+          components[action.vnode.path] = action.vnode
+          return create(maybeDispatch, action.vnode)
+        case UPDATE_THUNK:
+          if (action.prev) {
+            components[action.vnode.path] = action.vnode
+          }
+          return update(maybeDispatch, action.vnode, action.prev)
+        case DESTROY_THUNK:
+          delete components[action.vnode.path]
+          return destroy(maybeDispatch, action.vnode)
+        default:
+          return next(action)
+      }
     }
   }
 }
