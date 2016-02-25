@@ -2,10 +2,10 @@
  * Imports
  */
 
-import {actions} from 'virtex'
 import defaults from '@f/defaults'
 import arrayEqual from '@f/array-equal'
 import objectEqual from '@f/object-equal'
+import {actions, findDOMNode} from 'virtex'
 
 /**
  * Constants
@@ -17,7 +17,7 @@ const {CREATE_THUNK, UPDATE_THUNK, DESTROY_THUNK} = actions.types
  * virtex-component
  */
 
-function middleware (components = {}) {
+function middleware (components = {}, postRender = () => {}) {
   return ({dispatch}) => {
     const maybeDispatch = action => action && dispatch(action)
 
@@ -25,12 +25,12 @@ function middleware (components = {}) {
       switch (action.type) {
         case CREATE_THUNK:
           components[action.vnode.path] = action.vnode
-          return create(maybeDispatch, action.vnode)
+          return create(maybeDispatch, action.vnode, postRender)
         case UPDATE_THUNK:
           if (action.prev) {
             components[action.vnode.path] = action.vnode
           }
-          return update(maybeDispatch, action.vnode, action.prev)
+          return update(maybeDispatch, action.vnode, action.prev, postRender)
         case DESTROY_THUNK:
           delete components[action.vnode.path]
           return destroy(maybeDispatch, action.vnode)
@@ -41,9 +41,9 @@ function middleware (components = {}) {
   }
 }
 
-function create (dispatch, thunk) {
+function create (dispatch, thunk, postRender) {
   const component = thunk.type
-  const {onCreate} = component
+  const {onCreate, afterRender} = component
 
   thunk.props = thunk.props || {}
 
@@ -52,27 +52,26 @@ function create (dispatch, thunk) {
   component.shouldUpdate = component.shouldUpdate || shouldUpdate
 
   // Call the onCreate hook
-  if (onCreate) {
-    dispatch(onCreate(thunk))
-  }
+  if (onCreate) dispatch(onCreate(thunk))
+  if (afterRender) postRender(() => dispatch(afterRender(thunk, findDOMNode(thunk))))
 
   return (thunk.vnode = render(component, thunk))
 }
 
-function update (dispatch, thunk, prev) {
+function update (dispatch, thunk, prev, postRender) {
   if (thunk.vnode) return thunk.vnode
 
   const component = thunk.type
-  const {onUpdate, shouldUpdate} = component
+  const {onUpdate, shouldUpdate, afterRender} = component
 
   thunk.props = thunk.props || {}
   defaults(thunk, prev)
 
   if (shouldUpdate(prev, thunk)) {
-    onUpdate && dispatch(onUpdate(prev, thunk))
-    thunk.vnode = render(component, thunk)
+    if (onUpdate) dispatch(onUpdate(prev, thunk))
+    if (afterRender) postRender(() => dispatch(afterRender(thunk, findDOMNode(thunk))))
 
-    return thunk.vnode
+    return (thunk.vnode = render(component, thunk))
   }
 
   return (thunk.vnode = prev.vnode)
