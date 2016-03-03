@@ -3,6 +3,7 @@
  */
 
 import defaults from '@f/defaults'
+import identity from '@f/identity'
 import arrayEqual from '@f/equal-array'
 import objectEqual from '@f/equal-obj'
 import {actions, findDOMNode} from 'virtex'
@@ -43,9 +44,9 @@ function middleware (components = {}, postRender = () => {}) {
 
 function create (dispatch, thunk, postRender) {
   const component = thunk.type
-  const {onCreate, afterRender} = component
+  const {onCreate, afterRender, getProps = identity} = component
 
-  thunk.props = thunk.props || {}
+  thunk.props = getProps(thunk.props || {})
 
   // Setup the default immutable shouldUpdate if this component
   // hasn't exported one
@@ -62,9 +63,9 @@ function update (dispatch, thunk, prev, postRender) {
   if (thunk.vnode) return thunk.vnode
 
   const component = thunk.type
-  const {onUpdate, shouldUpdate, afterRender} = component
+  const {onUpdate, shouldUpdate, afterRender, getProps = identity} = component
 
-  thunk.props = thunk.props || {}
+  thunk.props = getProps(thunk.props || {})
   defaults(thunk, prev)
 
   if (shouldUpdate(prev, thunk)) {
@@ -78,7 +79,9 @@ function update (dispatch, thunk, prev, postRender) {
 }
 
 function destroy (dispatch, thunk) {
-  const {onRemove} = thunk.type
+  const {onRemove, getProps = identity} = thunk.type
+
+  thunk.props = getProps(thunk.props || {})
   onRemove && dispatch(onRemove(thunk))
 }
 

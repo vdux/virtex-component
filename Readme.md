@@ -59,6 +59,19 @@ All lifecycle hooks receive `model` (and possibly `prevModel`) and may return an
 
 By default, your component will only update if a shallow equality check fails for your children or prev/next props.  However, by exporting a custom `shouldUpdate` function, you can control this yourself.
 
+## getProps
+
+Use this to transform props before they're passed into any of your component's other methods. It receives only props, and should return a new props object.  E.g.
+
+```javascript
+function getProps (props) {
+  return {
+    ...props,
+    timeout: props.timeout || 0
+  }
+}
+```
+
 ## Component map
 
 If you pass an object to virtex-component when you install it, it will maintain a map for you of components to paths. E.g.
