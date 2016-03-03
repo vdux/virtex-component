@@ -3,8 +3,8 @@
  */
 
 import defaults from '@f/defaults'
-import arrayEqual from '@f/array-equal'
-import objectEqual from '@f/object-equal'
+import arrayEqual from '@f/equal-array'
+import objectEqual from '@f/equal-obj'
 import {actions, findDOMNode} from 'virtex'
 
 /**
