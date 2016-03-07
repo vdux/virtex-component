@@ -90,7 +90,7 @@ function render (component, thunk) {
 }
 
 function shouldUpdate (prev, next) {
-  return (next.shouldUpdate || defaultShouldUpdate)(prev, next)
+  return (next.type.shouldUpdate || defaultShouldUpdate)(prev, next)
 }
 
 function defaultShouldUpdate (prev, next) {
