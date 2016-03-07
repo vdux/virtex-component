@@ -18,7 +18,9 @@ const {CREATE_THUNK, UPDATE_THUNK, DESTROY_THUNK} = actions.types
  * virtex-component
  */
 
-function middleware (components = {}, postRender = () => {}) {
+function middleware (config = {}) {
+  const {components = {}, postRender = () => {}, ignoreShouldUpdate = () => false} = config
+
   return ({dispatch}) => {
     const maybeDispatch = action => action && dispatch(action)
 
@@ -31,7 +33,7 @@ function middleware (components = {}, postRender = () => {}) {
           if (action.prev) {
             components[action.vnode.path] = action.vnode
           }
-          return update(maybeDispatch, action.vnode, action.prev, postRender)
+          return update(maybeDispatch, action.vnode, action.prev, postRender, ignoreShouldUpdate())
         case DESTROY_THUNK:
           delete components[action.vnode.path]
           return destroy(maybeDispatch, action.vnode)
@@ -48,10 +50,6 @@ function create (dispatch, thunk, postRender) {
 
   thunk.props = getProps(thunk.props || {})
 
-  // Setup the default immutable shouldUpdate if this component
-  // hasn't exported one
-  component.shouldUpdate = component.shouldUpdate || shouldUpdate
-
   // Call the onCreate hook
   if (onCreate) dispatch(onCreate(thunk))
   if (afterRender) postRender(() => dispatch(afterRender(thunk, findDOMNode(thunk))))
@@ -59,16 +57,16 @@ function create (dispatch, thunk, postRender) {
   return (thunk.vnode = render(component, thunk))
 }
 
-function update (dispatch, thunk, prev, postRender) {
+function update (dispatch, thunk, prev, postRender, forceUpdate) {
   if (thunk.vnode) return thunk.vnode
 
   const component = thunk.type
-  const {onUpdate, shouldUpdate, afterRender, getProps = identity} = component
+  const {onUpdate, afterRender, getProps = identity} = component
 
   thunk.props = getProps(thunk.props || {})
   defaults(thunk, prev)
 
-  if (shouldUpdate(prev, thunk)) {
+  if (forceUpdate || shouldUpdate(prev, thunk)) {
     if (onUpdate) dispatch(onUpdate(prev, thunk))
     if (afterRender) postRender(() => dispatch(afterRender(thunk, findDOMNode(thunk))))
 
@@ -92,6 +90,10 @@ function render (component, thunk) {
 }
 
 function shouldUpdate (prev, next) {
+  return (next.shouldUpdate || defaultShouldUpdate)(prev, next)
+}
+
+function defaultShouldUpdate (prev, next) {
   return !arrayEqual(prev.children, next.children) || !objectEqual(prev.props, next.props)
 }
 
