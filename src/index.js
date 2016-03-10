@@ -19,7 +19,7 @@ const {CREATE_THUNK, UPDATE_THUNK, DESTROY_THUNK} = actions.types
  */
 
 function middleware (config = {}) {
-  const {components = {}, postRender = () => {}, ignoreShouldUpdate = () => false} = config
+  const {components = {}, postRender = () => {}, ignoreShouldUpdate = () => false, getContext = () => ({})} = config
 
   return ({dispatch}) => {
     const maybeDispatch = action => action && dispatch(action)
@@ -28,59 +28,59 @@ function middleware (config = {}) {
       switch (action.type) {
         case CREATE_THUNK:
           components[action.vnode.path] = action.vnode
-          return create(maybeDispatch, action.vnode, postRender)
+          return create(action.vnode)
         case UPDATE_THUNK:
           if (action.prev) {
             components[action.vnode.path] = action.vnode
           }
-          return update(maybeDispatch, action.vnode, action.prev, postRender, ignoreShouldUpdate())
+          return update(action.vnode, action.prev)
         case DESTROY_THUNK:
           delete components[action.vnode.path]
-          return destroy(maybeDispatch, action.vnode)
+          return destroy(action.vnode)
         default:
           return next(action)
       }
     }
+
+    function create (thunk) {
+      const component = thunk.type
+      const {onCreate, afterRender, getProps = identity} = component
+
+      thunk.props = getProps(thunk.props || {}, getContext())
+
+      // Call the onCreate hook
+      if (onCreate) maybeDispatch(onCreate(thunk))
+      if (afterRender) postRender(() => maybeDispatch(afterRender(thunk, findDOMNode(thunk))))
+
+      return (thunk.vnode = render(component, thunk))
+    }
+
+    function update (thunk, prev) {
+      if (thunk.vnode) return thunk.vnode
+
+      const component = thunk.type
+      const {onUpdate, afterRender, getProps = identity} = component
+
+      thunk.props = getProps(thunk.props || {}, getContext())
+      defaults(thunk, prev)
+
+      if (ignoreShouldUpdate() || shouldUpdate(prev, thunk)) {
+        if (onUpdate) maybeDispatch(onUpdate(prev, thunk))
+        if (afterRender) postRender(() => maybeDispatch(afterRender(thunk, findDOMNode(thunk))))
+
+        return (thunk.vnode = render(component, thunk))
+      }
+
+      return (thunk.vnode = prev.vnode)
+    }
+
+    function destroy (thunk) {
+      const {onRemove, getProps = identity} = thunk.type
+
+      thunk.props = getProps(thunk.props || {}, getContext())
+      onRemove && maybeDispatch(onRemove(thunk))
+    }
   }
-}
-
-function create (dispatch, thunk, postRender) {
-  const component = thunk.type
-  const {onCreate, afterRender, getProps = identity} = component
-
-  thunk.props = getProps(thunk.props || {})
-
-  // Call the onCreate hook
-  if (onCreate) dispatch(onCreate(thunk))
-  if (afterRender) postRender(() => dispatch(afterRender(thunk, findDOMNode(thunk))))
-
-  return (thunk.vnode = render(component, thunk))
-}
-
-function update (dispatch, thunk, prev, postRender, forceUpdate) {
-  if (thunk.vnode) return thunk.vnode
-
-  const component = thunk.type
-  const {onUpdate, afterRender, getProps = identity} = component
-
-  thunk.props = getProps(thunk.props || {})
-  defaults(thunk, prev)
-
-  if (forceUpdate || shouldUpdate(prev, thunk)) {
-    if (onUpdate) dispatch(onUpdate(prev, thunk))
-    if (afterRender) postRender(() => dispatch(afterRender(thunk, findDOMNode(thunk))))
-
-    return (thunk.vnode = render(component, thunk))
-  }
-
-  return (thunk.vnode = prev.vnode)
-}
-
-function destroy (dispatch, thunk) {
-  const {onRemove, getProps = identity} = thunk.type
-
-  thunk.props = getProps(thunk.props || {})
-  onRemove && dispatch(onRemove(thunk))
 }
 
 function render (component, thunk) {
