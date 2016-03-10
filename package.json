@@ -2,7 +2,7 @@
   "name": "virtex-component",
   "description": "Component rendering middleware for virtex",
   "repository": "git://github.com/ashaffer/virtex-component.git",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "license": "MIT",
   "main": "lib/index.js",
   "scripts": {
