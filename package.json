@@ -10,7 +10,7 @@
     "postpublish": "rm -rf lib"
   },
   "dependencies": {
-    "@f/defaults": "^0.1.1",
+    "@f/defaults": "^1.0.1",
     "@f/equal-array": "^1.2.2",
     "@f/equal-obj": "^1.2.1",
     "@f/identity": "^1.1.1",
