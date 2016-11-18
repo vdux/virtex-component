@@ -8,6 +8,7 @@ import curry from '@f/curry-transparently'
 import compose from 'redux/lib/compose'
 import arrayEqual from '@f/equal-array'
 import identity from '@f/identity'
+import t from 'tcomb-validation'
 import multi from 'redux-multi'
 import falsy from 'redux-falsy'
 import reduce from '@f/reduce'
@@ -46,7 +47,9 @@ function middleware (config = {}) {
 
         thunk.context = currentContext
         thunk.props = thunk.props || {}
-        thunk.state = priorState || initialState(thunk)
+        thunk.state = priorState || decorateErrors(thunk, 'initialState', () => initialState(thunk))
+
+        validate(thunk)
 
         if (thunk.type.getContext && isRoot(thunk)) {
           updateContext(thunk)
@@ -60,10 +63,10 @@ function middleware (config = {}) {
         }
 
         // Call the onCreate hook
-        if (onCreate) thunk.middleware(onCreate(thunk))
-        if (afterRender) postRender(() => thunk.middleware(afterRender(thunk, findDOMNode(thunk))))
+        if (onCreate) thunk.middleware(decorateErrors(thunk, 'onCreate', () => onCreate(thunk)))
+        if (afterRender) postRender(() => thunk.middleware(decorateErrors(thunk, 'afterRender', () => afterRender(thunk, findDOMNode(thunk)))))
 
-        thunk.vnode = render(component, thunk)
+        thunk.vnode = decorateErrors(thunk, 'render', () => render(component, thunk))
         return thunk.vnode
       }
       case UPDATE_THUNK: {
@@ -82,6 +85,8 @@ function middleware (config = {}) {
         thunk.middleware = prev.middleware
         thunk.state = lookup(getState(), thunk.path)
 
+        validate(thunk)
+
         if (thunk.type.getContext && isRoot(thunk)) {
           updateContext(thunk)
         }
@@ -89,10 +94,10 @@ function middleware (config = {}) {
         thunk.context = currentContext
 
         if (prev.context !== thunk.context || shouldUpdate(prev, thunk)) {
-          if (onUpdate) thunk.middleware(onUpdate(prev, thunk))
-          if (afterRender) postRender(() => thunk.middleware(afterRender(thunk, findDOMNode(thunk))))
+          if (onUpdate) thunk.middleware(decorateErrors(thunk, 'onUpdate', () => onUpdate(prev, thunk)))
+          if (afterRender) postRender(() => thunk.middleware(decorateErrors(thunk, 'afterRender', () => afterRender(thunk, findDOMNode(thunk)))))
 
-          thunk.vnode = render(component, thunk)
+          thunk.vnode = decorateErrors(thunk, 'render', () => render(component, thunk))
         } else {
           thunk.vnode = prev.vnode
         }
@@ -108,7 +113,10 @@ function middleware (config = {}) {
         const {onRemove, reducer, initialState, getProps = identity} = thunk.type
 
         thunk.props = thunk.props || {}
-        if (onRemove) thunk.middleware(onRemove(thunk))
+
+        validate(thunk)
+
+        if (onRemove) thunk.middleware(decorateErrors(thunk, 'onRemove', () => onRemove(thunk)))
         if (reducer || initialState) dispatch(destroyEphemeral(thunk.path))
 
         return
@@ -223,6 +231,27 @@ function promisifyArray () {
   }
 }
 
+const NODE_ENV = typeof process !== 'undefined' ? process.env.NODE_ENV : 'development'
+
+function validate (thunk) {
+  if (NODE_ENV !== 'development') return
+
+  if (thunk.type.propTypes) {
+    const res = t.validate(thunk.props, thunk.type.propTypes)
+    if (!res.isValid()) {
+
+      res.errors.forEach(({message}) => console.error(`<${thunk.type.name}/> propTypes: ${message}`))
+    }
+  }
+
+  if (thunk.type.stateTypes) {
+    const res = t.validate(thunk.state, thunk.type.stateTypes)
+    if (!res.isValid()) {
+      res.errors.forEach(({message}) => console.error(`<${thunk.type.name}/> stateTypes: ${message}`))
+    }
+  }
+}
+
 /**
  * Local action creation/handling
  */
@@ -302,6 +331,15 @@ function transformLocal (ctx) {
   return next => action => isLocalAction(action) && action.$$fn.model.path === ctx.path
     ? next({type: action.$$fn.type, payload: action.$$args, meta: {localAction: true}})
     : next(action)
+}
+
+function decorateErrors (thunk, name, fn) {
+  try  {
+    return fn()
+  } catch (err) {
+    err.message = `<${thunk.type.name || 'UnknownComponent'}/> ${name}: ${err.message}`
+    throw err
+  }
 }
 
 /**
