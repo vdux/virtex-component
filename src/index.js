@@ -348,5 +348,6 @@ function decorateErrors (thunk, name, fn) {
 
 export default middleware
 export {
-  forceUpdate
+  forceUpdate,
+  t
 }
