@@ -269,7 +269,7 @@ function propsEqual (a, b) {
       const bVal = b[key]
 
       if (!a.hasOwnProperty(key) || !b.hasOwnProperty(key) || aVal !== bVal) {
-        if (!equalActions(a, b)) {
+        if (!equalActions(aVal, bVal)) {
           return false
         }
       }
