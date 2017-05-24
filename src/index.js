@@ -282,6 +282,10 @@ function propsEqual (a, b) {
 }
 
 function equalActions (a, b) {
+  if (isDecoder(a) && isDecoder(b)) {
+    return equalActions(a.handler, b.handler) && a.decoder === b.decoder
+  }
+
   if (isLocalAction(a) && isLocalAction(b)) {
     return a.$$fn.type === b.$$fn.type && a.$$fn.path === b.$$fn.path && arrayEqual(a.$$args, b.$$args)
   }
@@ -314,6 +318,10 @@ function createActions (actions = [], thunk) {
 
 function isLocalAction (a) {
   return a && a.$$fn instanceof LocalAction
+}
+
+function isDecoder (a) {
+  return a && isLocalAction(a.handler) && typeof a.decoder === 'function'
 }
 
 function LocalAction (type, model) {
