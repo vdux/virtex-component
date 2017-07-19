@@ -202,7 +202,7 @@ function createMiddleware ({path, context, actions, type}, getState, getContext,
     actions,
     getState,
     getContext,
-    getThunk,
+    getThunk: () => ({...getThunk(), state: getState()}),
     forceRerender,
     dispatch: action => composed(action)
   }
